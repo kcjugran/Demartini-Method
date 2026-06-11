@@ -1,1 +1,60 @@
+name: Build and Deploy
 
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+
+  windows:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller
+      - run: pyinstaller --onefile --console --icon demartini.ico --name TheDemartiniMethod --add-data "demartini.ico;." demartini.py
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/TheDemartiniMethod.exe
+
+  mac:
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyinstaller
+      - run: pyinstaller --onedir --windowed --name TheDemartiniMethod --add-data "demartini.ico:." demartini.py
+      - run: cd dist && zip -r TheDemartiniMethod-mac.zip TheDemartiniMethod.app
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/TheDemartiniMethod-mac.zip
+
+  website:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4
