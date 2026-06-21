@@ -34,30 +34,30 @@ import json, os, base64, tempfile
 from datetime import date
 
 # ── palette ──────────────────────────────────────────────────────────────────
-# Calm, modern, minimal. Warm "paper" neutrals with soft, desaturated accents.
-BG="#faf8f4"      # warm off-white page
-SURF="#ffffff"    # cards
-SURF2="#f4f1ec"   # recessed fields / soft fill
-BOR="#eae6df"     # hairline borders
-BOR2="#d8d3ca"    # stronger borders / focus
-TX="#2b2823"      # primary text (soft near-black)
-TX2="#6b665f"     # secondary
-TX3="#a8a39a"     # tertiary / hints
-GR="#5a7d63"      # muted sage (completion / yes)
-GRL="#eaf1ea"
-AMBER="#9a7b4a"   # muted clay (guidance)
-AMBERL="#f6efe3"
-# mode accents — each a soft (deep, light) pair, all desaturated & gentle
-M={
- "others":("#5a7a9a","#eef2f6","#9a6a7a","#f6eef1"),  # dusty blue / muted rose
- "self":  ("#7a6a9a","#f0edf5","#9a7a5a","#f6efe6"),  # soft violet / warm sand
- "events":("#5a8a6a","#ecf3ed","#9a7a5a","#f5efe6"),  # sage / clay
- "grief": ("#5a8a8a","#ebf2f2","#8a6a8a","#f3edf3"),  # soft teal / heather
+BG    = "#f5f2ed"   # warm page
+SURF  = "#ffffff"   # card surface
+SURF2 = "#eeeae4"   # inset / field background
+SURF3 = "#faf8f5"   # elevated card (slightly lighter than BG)
+BOR   = "#e2ddd6"   # hairline border
+BOR2  = "#c4bdb3"   # focus / emphasis border
+TX    = "#26231f"   # primary text
+TX2   = "#5e5950"   # secondary
+TX3   = "#a09890"   # tertiary / placeholder
+GR    = "#4e7059"   # sage green
+GRL   = "#e4efe6"
+GRD   = "#3d5945"   # sage dark (hover)
+AMBER = "#8a6e3e"   # clay (guidance)
+AMBERL= "#f4e9d4"
+M = {
+ "others": ("#4e6f8a","#e8eff6","#8a5f70","#f4eaed"),
+ "self":   ("#6a5e8a","#eae7f4","#8a6e48","#f4ecdf"),
+ "events": ("#4e7a5e","#e6f1e8","#8a6848","#f4ece3"),
+ "grief":  ("#4e7878","#e6efef","#7a5e7a","#eee6ee"),
 }
-FB=("Segoe UI",10); FBB=("Segoe UI",10,"bold"); FS=("Segoe UI",9)
-FH=("Segoe UI",16,"bold"); FM=("Consolas",10); FSI=("Segoe UI",9,"italic")
+FB=("Segoe UI",10); FBB=("Segoe UI",11,"bold"); FS=("Segoe UI",9)
+FH=("Segoe UI",17,"bold"); FM=("Segoe UI",10); FSI=("Segoe UI",9,"italic")
 FTINY=("Segoe UI",8); FSUB=("Segoe UI",9)
-SEVEN="Seven Areas — Spiritual · Mental · Vocational · Financial · Familial · Social · Physical    ·    Past → Present"
+SEVEN="Seven Areas — Spiritual · Mental · Vocational · Financial · Familial · Social · Physical   ·   Past → Present"
 
 
 # ── icon ─────────────────────────────────────────────────────────────────────
@@ -402,7 +402,8 @@ class App(tk.Tk):
         self._build_chrome(); self._build_modebar(); self._build_nb()
         self.status=tk.StringVar(value=SEVEN)
         tk.Frame(self,bg=BOR,height=1).pack(fill="x",side="bottom")
-        tk.Label(self,textvariable=self.status,font=FTINY,bg=BG,fg=TX3,anchor="w").pack(fill="x",side="bottom",padx=28,pady=6)
+        tk.Label(self,textvariable=self.status,font=("Segoe UI",8),bg=SURF,fg=TX3,
+                 anchor="w").pack(fill="x",side="bottom",padx=30,pady=7)
         self._autosave_file=_autosave_path()
         self._dirty=False
         self._last_autosave=""
@@ -416,59 +417,97 @@ class App(tk.Tk):
         self.bind_all("<KeyRelease>", lambda e: self._mark_dirty(), add="+")
 
     def _build_chrome(self):
+        # ── Top header bar ──────────────────────────────────────────────────
         top=tk.Frame(self,bg=SURF); top.pack(fill="x")
-        inn=tk.Frame(top,bg=SURF); inn.pack(fill="x",padx=28,pady=(18,16))
+        inn=tk.Frame(top,bg=SURF); inn.pack(fill="x",padx=30,pady=(20,18))
+        # left: title + subtitle
         title_box=tk.Frame(inn,bg=SURF); title_box.pack(side="left")
         self.title_lbl=tk.Label(title_box,text="The Demartini Method",font=FH,bg=SURF,fg=TX)
         self.title_lbl.pack(anchor="w")
-        self.subtitle_lbl=tk.Label(title_box,text="A space to bring a charged perception back into balance",
-                                   font=FSI,bg=SURF,fg=TX3)
-        self.subtitle_lbl.pack(anchor="w",pady=(2,0))
-        bf=tk.Frame(inn,bg=SURF); bf.pack(side="right")
-        for lbl,cmd in [("Guide",self.show_guide),("Save",self.save_session),("Open",self.open_session),
-                        ("Export",self.export_txt),("New",self.new_session)]:
-            tk.Button(bf,text=lbl,command=cmd,font=FS,bg=SURF,fg=TX2,relief="flat",cursor="hand2",
-                      activebackground=SURF2,activeforeground=TX,padx=12,pady=6,bd=0).pack(side="left",padx=2)
-        tk.Frame(self,bg=BOR,height=1).pack(fill="x")  # single hairline
+        self.subtitle_lbl=tk.Label(title_box,
+            text="Bringing a charged perception back into balance",
+            font=FSI,bg=SURF,fg=TX3)
+        self.subtitle_lbl.pack(anchor="w",pady=(3,0))
+        # right: pill-style toolbar buttons with separator between groups
+        bf=tk.Frame(inn,bg=SURF); bf.pack(side="right",padx=(0,2))
+        # Guide (separate)
+        self._tb(bf,"Guide",self.show_guide,primary=False)
+        tk.Frame(bf,bg=BOR,width=1,height=20).pack(side="left",padx=10,pady=4)
+        # Save / Open / Export
+        self._tb(bf,"Save",self.save_session)
+        self._tb(bf,"Open",self.open_session)
+        self._tb(bf,"Export",self.export_txt)
+        tk.Frame(bf,bg=BOR,width=1,height=20).pack(side="left",padx=10,pady=4)
+        # New (destructive — slightly different look)
+        self._tb(bf,"New session",self.new_session,primary=False)
+        # Hairline under header
+        tk.Frame(self,bg=BOR,height=1).pack(fill="x")
 
-        meta=tk.Frame(self,bg=BG); meta.pack(fill="x")
-        mi=tk.Frame(meta,bg=BG); mi.pack(fill="x",padx=28,pady=(14,6))
+        # ── Meta / session info bar ─────────────────────────────────────────
+        meta=tk.Frame(self,bg=SURF); meta.pack(fill="x")
+        mi=tk.Frame(meta,bg=SURF); mi.pack(fill="x",padx=30,pady=(12,12))
         self.v_subj=tk.StringVar(); self.v_date=tk.StringVar(value=str(date.today()))
         self.v_note=tk.StringVar(); self.v_val=tk.StringVar()
-        self._mf=self._meta(mi,"Person / Event",self.v_subj,24)
-        self._meta(mi,"Date",self.v_date,11); self._meta(mi,"Note",self.v_note,18)
-        self._meta(mi,"Top 3 Values",self.v_val,22)
+        self._mf=self._meta(mi,"Person / Event",self.v_subj,22)
+        self._meta(mi,"Date",self.v_date,11)
+        self._meta(mi,"Note",self.v_note,18)
+        self._meta(mi,"Your top 3 values",self.v_val,22)
+        # autosave indicator (right side)
+        self._as_lbl=tk.Label(mi,text="",font=FTINY,bg=SURF,fg=TX3)
+        self._as_lbl.pack(side="right",padx=(0,2))
+        tk.Frame(self,bg=BOR,height=1).pack(fill="x")
+
+    def _tb(self,parent,text,cmd,primary=True):
+        """Toolbar button — pill-shaped, two styles."""
+        b=tk.Button(parent,text=text,command=cmd,font=FS,cursor="hand2",relief="flat",bd=0,
+                    bg=SURF2 if primary else SURF,fg=TX2,
+                    activebackground=BOR,activeforeground=TX,
+                    padx=14,pady=6)
+        b.pack(side="left",padx=2)
+        return b
 
     def _meta(self,parent,label,var,w):
-        f=tk.Frame(parent,bg=BG); f.pack(side="left",padx=(0,22))
-        tk.Label(f,text=label.upper(),font=FTINY,bg=BG,fg=TX3).pack(anchor="w",pady=(0,3))
-        e=tk.Entry(f,textvariable=var,font=FB,width=w,bg=SURF,fg=TX,relief="flat",bd=0,
-                 insertbackground=TX,highlightthickness=1,highlightbackground=BOR,highlightcolor=BOR2)
-        e.pack(ipady=5,ipadx=6)
+        f=tk.Frame(parent,bg=SURF); f.pack(side="left",padx=(0,24))
+        tk.Label(f,text=label.upper(),font=FTINY,bg=SURF,fg=TX3).pack(anchor="w",pady=(0,4))
+        e=tk.Entry(f,textvariable=var,font=FB,width=w,bg=SURF2,fg=TX,
+                   relief="flat",bd=0,insertbackground=TX,
+                   highlightthickness=1,highlightbackground=BOR,highlightcolor=BOR2)
+        e.pack(ipady=6,ipadx=8)
+        # subtle focus ring effect
+        e.bind("<FocusIn>", lambda ev,en=e: en.config(highlightbackground=BOR2))
+        e.bind("<FocusOut>",lambda ev,en=e: en.config(highlightbackground=BOR))
         return f
 
     def _build_modebar(self):
         bar=tk.Frame(self,bg=BG); bar.pack(fill="x")
-        inn=tk.Frame(bar,bg=BG); inn.pack(fill="x",padx=28,pady=(6,14))
+        inn=tk.Frame(bar,bg=BG); inn.pack(fill="x",padx=30,pady=(14,14))
+        tk.Label(inn,text="I want to process something about:",font=FTINY,
+                 bg=BG,fg=TX3).pack(side="left",padx=(0,14))
         self._mbtn={}
-        defs=[("others","Another person",M["others"]),("self","Myself",M["self"]),
-              ("events","An event",M["events"]),("grief","A loss or change",M["grief"])]
+        defs=[("others","Another person",M["others"]),
+              ("self","Myself",M["self"]),
+              ("events","An event",M["events"]),
+              ("grief","A loss or change",M["grief"])]
         for k,lbl,colors in defs:
-            b=tk.Button(inn,text="  "+lbl+"  ",font=FS,relief="flat",bd=0,cursor="hand2",padx=10,pady=7,
-                        command=lambda kk=k:self._switch(kk)); b.pack(side="left",padx=(0,6))
+            b=tk.Button(inn,text=lbl,font=("Segoe UI",9),relief="flat",bd=0,
+                        cursor="hand2",padx=16,pady=8,
+                        command=lambda kk=k:self._switch(kk))
+            b.pack(side="left",padx=(0,6))
             self._mbtn[k]=(b,colors[0],colors[1])
         self._restyle_mbtn()
 
     def _restyle_mbtn(self):
         for k,(b,ac,acl) in self._mbtn.items():
             if k==self._mode:
-                b.config(bg=acl,fg=ac,font=FBB)
+                b.config(bg=acl,fg=ac,font=("Segoe UI",9,"bold"))
             else:
-                b.config(bg=SURF,fg=TX3,font=FS)
+                b.config(bg=SURF,fg=TX3,font=("Segoe UI",9),
+                         activebackground=SURF2,activeforeground=TX)
 
     def _switch(self,mode):
         if mode==self._mode: return
-        if not messagebox.askyesno("Switch focus","Switch to a different focus? Unsaved work will be lost.\nSave first if you'd like to keep it."): return
+        if not messagebox.askyesno("Switch focus",
+            "Switch to a different focus?\n\nUnsaved work will be lost — save first if needed."): return
         self._mode=mode; self._session=empty_session(mode); self._restyle_mbtn(); self._render()
 
     def _build_nb(self):
@@ -517,103 +556,156 @@ class App(tk.Tk):
         ac,acl=(M[key][0],M[key][1]) if side=="a" else (M[key][2],M[key][3])
         desc=md["a_desc"] if side=="a" else md["b_desc"]
 
-        tk.Frame(parent,bg=BG,height=8).pack()
-        tk.Label(parent,text=desc,font=FSUB,bg=BG,fg=TX2,wraplength=900,justify="left").pack(anchor="w",padx=28,pady=(8,2))
-        # TAI discipline note (not for grief, which is qualities not TAIs)
-        if key!="grief":
-            gb=tk.Frame(parent,bg=AMBERL); gb.pack(fill="x",padx=28,pady=(6,10))
-            tk.Label(gb,text=TAI_GUIDE,font=FTINY,bg=AMBERL,fg=AMBER,wraplength=860,justify="left").pack(anchor="w",padx=14,pady=9)
+        tk.Frame(parent,bg=BG,height=16).pack()
 
-        # ── trait card ──────────────────────────────────────────────────────
-        tc=tk.Frame(parent,bg=SURF); tc.pack(fill="x",padx=28,pady=(0,10))
+        # ── Side description ─────────────────────────────────────────────────
+        tk.Label(parent,text=desc,font=("Segoe UI",10),bg=BG,fg=TX2,
+                 wraplength=860,justify="left").pack(anchor="w",padx=30,pady=(0,6))
+
+        # ── TAI guidance banner ──────────────────────────────────────────────
+        if key!="grief":
+            gb=tk.Frame(parent,bg=AMBERL); gb.pack(fill="x",padx=30,pady=(0,14))
+            tk.Label(gb,text="  ◆  "+TAI_GUIDE,font=FTINY,bg=AMBERL,fg=AMBER,
+                     wraplength=840,justify="left").pack(anchor="w",padx=10,pady=10)
+
+        # ── Trait / aspect list card ─────────────────────────────────────────
         col1="1" if side=="a" else "8"
         if key=="grief": col1="C1" if side=="a" else "C5"
-        ch=tk.Frame(tc,bg=SURF); ch.pack(fill="x",padx=18,pady=(16,2))
-        tk.Frame(ch,bg=ac,width=4,height=18).pack(side="left",padx=(0,10))
-        tk.Label(ch,text=(md["ta"] if side=="a" else md["tb"]),font=FBB,bg=SURF,fg=TX).pack(side="left")
-        tk.Label(ch,text=f"  ·  Col {col1}",font=FTINY,bg=SURF,fg=TX3).pack(side="left",pady=(2,0))
-        tk.Label(tc,text="Focus on your top three. Add more only if you need to.   "+
-                 (md["ha"] if side=="a" else md["hb"]),font=FSI,bg=SURF,fg=TX3,wraplength=860,justify="left").pack(anchor="w",padx=18,pady=(2,2))
-        tf=tk.Frame(tc,bg=SURF); tf.pack(fill="x",padx=18,pady=(6,6))
+        tc=tk.Frame(parent,bg=SURF); tc.pack(fill="x",padx=30,pady=(0,12))
+        # Card header strip
+        hstrip=tk.Frame(tc,bg=acl); hstrip.pack(fill="x")
+        tk.Label(hstrip,text=f"  Col {col1}",font=("Segoe UI",8,"bold"),
+                 bg=acl,fg=ac).pack(side="left",padx=(14,6),pady=10)
+        tk.Label(hstrip,text=(md["ta"] if side=="a" else md["tb"]),
+                 font=FBB,bg=acl,fg=TX).pack(side="left",pady=10)
+        # Hint
+        tk.Label(tc,text=(md["ha"] if side=="a" else md["hb"]),
+                 font=FSI,bg=SURF,fg=TX3,wraplength=820,justify="left").pack(anchor="w",padx=16,pady=(10,2))
+        tk.Label(tc,text="Start with your top three. You can add more if needed.",
+                 font=("Segoe UI",8),bg=SURF,fg=TX3).pack(anchor="w",padx=16,pady=(0,8))
+        # Trait entries
+        tf=tk.Frame(tc,bg=SURF); tf.pack(fill="x",padx=16,pady=(0,4))
         vars_list=[]
         if side=="a": self._tva=vars_list; self._tfa=tf
         else: self._tvb=vars_list; self._tfb=tf
         for t in self._session.get(f"traits_{side}",["","",""]):
             vars_list.append(tk.StringVar(value=t))
         self._render_traits(tf,vars_list,side,ac)
-        tk.Button(tc,text="+  add another",font=FS,bg=SURF,fg=ac,relief="flat",bd=0,cursor="hand2",
-                  activebackground=acl,activeforeground=ac,padx=4,pady=2,
-                  command=lambda s=side,vl=vars_list,t=tf,a=ac:self._add_trait(s,vl,t,a)).pack(anchor="w",padx=18,pady=(0,16))
+        # Add button
+        ab=tk.Button(tc,text="＋  Add another",font=("Segoe UI",9),bg=SURF,fg=ac,
+                     relief="flat",bd=0,cursor="hand2",activebackground=acl,
+                     activeforeground=ac,padx=6,pady=4,
+                     command=lambda s=side,vl=vars_list,t=tf,a=ac:self._add_trait(s,vl,t,a))
+        ab.pack(anchor="w",padx=16,pady=(2,14))
 
-        # ── column cards ────────────────────────────────────────────────────
+        # ── Column cards ─────────────────────────────────────────────────────
         col_defs=md["ca"] if side=="a" else md["cb"]
         col_texts={}
         if side=="a": self._cta=col_texts
         else: self._ctb=col_texts
         for cid,title,prompt,q in col_defs:
-            card=tk.Frame(parent,bg=SURF); card.pack(fill="x",padx=28,pady=6)
-            ch=tk.Frame(card,bg=SURF); ch.pack(fill="x",padx=18,pady=(16,0))
-            tk.Frame(ch,bg=ac,width=4,height=16).pack(side="left",padx=(0,10))
-            tk.Label(ch,text=title,font=FBB,bg=SURF,fg=TX).pack(side="left")
-            tk.Label(ch,text=f"  ·  Col {cid}",font=FTINY,bg=SURF,fg=TX3).pack(side="left",pady=(2,0))
-            pb=tk.Frame(card,bg=SURF); pb.pack(fill="x",padx=18,pady=(6,2))
-            tk.Label(pb,text=prompt,font=FSUB,bg=SURF,fg=TX2,justify="left",anchor="w",wraplength=850).pack(anchor="w")
-            bf=tk.Frame(card,bg=SURF); bf.pack(fill="x",padx=18,pady=(8,4))
+            card=tk.Frame(parent,bg=SURF); card.pack(fill="x",padx=30,pady=(0,10))
+            # Header strip with col badge + title
+            hstrip=tk.Frame(card,bg=acl); hstrip.pack(fill="x")
+            tk.Label(hstrip,text=f"  Col {cid}",font=("Segoe UI",8,"bold"),
+                     bg=acl,fg=ac).pack(side="left",padx=(14,8),pady=9)
+            tk.Label(hstrip,text=title,font=FBB,bg=acl,fg=TX).pack(side="left",pady=9)
+            # Prompt
+            tk.Label(card,text=prompt,font=("Segoe UI",9),bg=SURF,fg=TX2,
+                     justify="left",anchor="w",wraplength=830).pack(anchor="w",padx=18,pady=(10,4))
+            # Answer boxes
+            bf=tk.Frame(card,bg=SURF); bf.pack(fill="x",padx=18,pady=(4,4))
             tlist=[]; col_texts[cid]=tlist
             saved=self._session.get(f"cols_{side}",{}).get(cid,[])
             for i in range(len(vars_list)):
                 self._add_box(bf,tlist,vars_list,i,saved[i] if i<len(saved) else "",ac,acl)
             card._bf=bf; card._cid=cid; card._side=side
-            qf=tk.Frame(card,bg=acl); qf.pack(fill="x",padx=18,pady=(4,16))
-            tk.Label(qf,text=q,font=FSI,bg=acl,fg=ac,justify="left",wraplength=840).pack(side="left",padx=12,pady=8)
+            # Equilibration question — pill at the bottom
+            qf=tk.Frame(card,bg=SURF); qf.pack(fill="x",padx=18,pady=(6,14))
+            qpill=tk.Frame(qf,bg=acl); qpill.pack(anchor="w")
+            tk.Label(qpill,text="✓  "+q,font=("Segoe UI",8,"italic"),
+                     bg=acl,fg=ac,justify="left",wraplength=800).pack(anchor="w",padx=12,pady=7)
 
-        if side=="a": self._cards_a=[w for w in parent.winfo_children() if isinstance(w,tk.Frame) and hasattr(w,"_cid")]
-        else: self._cards_b=[w for w in parent.winfo_children() if isinstance(w,tk.Frame) and hasattr(w,"_cid")]
+        if side=="a":
+            self._cards_a=[w for w in parent.winfo_children()
+                           if isinstance(w,tk.Frame) and hasattr(w,"_cid")]
+        else:
+            self._cards_b=[w for w in parent.winfo_children()
+                           if isinstance(w,tk.Frame) and hasattr(w,"_cid")]
 
-        # ── check-in ────────────────────────────────────────────────────────
+        # ── Equilibration check-in ───────────────────────────────────────────
         cik=md["cia"] if side=="a" else md["cib"]; qs=CHECKINS[cik]
         civ={}
         if side=="a": self._cia=civ
         else: self._cib=civ
-        cic=tk.Frame(parent,bg=SURF); cic.pack(fill="x",padx=28,pady=(6,4))
-        chh=tk.Frame(cic,bg=SURF); chh.pack(fill="x",padx=18,pady=(16,4))
-        tk.Frame(chh,bg=GR,width=4,height=16).pack(side="left",padx=(0,10))
-        tk.Label(chh,text="Equilibration check-in",font=FBB,bg=SURF,fg=TX).pack(side="left")
+        cic=tk.Frame(parent,bg=SURF); cic.pack(fill="x",padx=30,pady=(4,4))
+        # Check-in header
+        chstrip=tk.Frame(cic,bg=GRL); chstrip.pack(fill="x")
+        tk.Label(chstrip,text="  ✓  Equilibration check-in",font=("Segoe UI",10,"bold"),
+                 bg=GRL,fg=GR).pack(side="left",padx=14,pady=12)
+        tk.Label(chstrip,text="Mark each Yes when you genuinely feel the balance",
+                 font=FTINY,bg=GRL,fg=GR).pack(side="left")
+        # Questions
         saved_ci=self._session.get(f"ci_{side}",{})
         for i,q in enumerate(qs):
-            row=tk.Frame(cic,bg=SURF); row.pack(fill="x",padx=18,pady=3)
-            tk.Label(row,text=q,font=FSUB,bg=SURF,fg=TX2,anchor="w",justify="left",wraplength=680).pack(side="left",fill="x",expand=True,padx=(0,12))
+            is_last=(i==len(qs)-1)
+            row=tk.Frame(cic,bg=SURF if i%2==0 else SURF2)
+            row.pack(fill="x")
+            tk.Label(row,text=f"  {i+1}",font=("Segoe UI",8),
+                     bg=row["bg"],fg=TX3,width=3,anchor="e").pack(side="left",pady=10)
+            tk.Label(row,text=q,font=("Segoe UI",9),bg=row["bg"],fg=TX2,
+                     anchor="w",justify="left",wraplength=640).pack(side="left",fill="x",
+                     expand=True,padx=(8,12),pady=10)
             sv=tk.StringVar(value=saved_ci.get(str(i),"")); civ[i]=sv
-            yb=tk.Button(row,text="Yes",font=FS,width=7,relief="flat",bd=0,cursor="hand2",bg=SURF2,fg=TX3,padx=2,pady=3)
-            nb=tk.Button(row,text="Not yet",font=FS,width=7,relief="flat",bd=0,cursor="hand2",bg=SURF2,fg=TX3,padx=2,pady=3)
-            nb=tk.Button(row,text="Not yet",font=FS,width=8,relief="flat",bd=0,cursor="hand2",bg=SURF2,fg=TX3)
+            nbg=row["bg"]
+            yb=tk.Button(row,text="  Yes  ",font=("Segoe UI",8),relief="flat",bd=0,
+                         cursor="hand2",bg=nbg,fg=TX3,padx=4,pady=4)
+            nb=tk.Button(row,text="Not yet",font=("Segoe UI",8),relief="flat",bd=0,
+                         cursor="hand2",bg=nbg,fg=TX3,padx=4,pady=4)
             def _set(val,yb=yb,nb=nb,sv=sv):
                 sv.set(val)
-                yb.config(bg=GRL if val=="yes" else SURF2,fg=GR if val=="yes" else TX3)
-                nb.config(bg=M[key][3] if val=="no" else SURF2,fg=M[key][2] if val=="no" else TX3)
+                yb.config(bg=GRL,fg=GR,font=("Segoe UI",8,"bold")) if val=="yes" else yb.config(bg=nbg,fg=TX3,font=("Segoe UI",8))
+                nb.config(bg=M[key][3],fg=M[key][2]) if val=="no" else nb.config(bg=nbg,fg=TX3)
             yb.config(command=lambda s=_set:s("yes")); nb.config(command=lambda s=_set:s("no"))
             if sv.get(): _set(sv.get(),yb,nb,sv)
-            nb.pack(side="right",padx=(6,0)); yb.pack(side="right",padx=(6,0))
+            nb.pack(side="right",padx=(4,14)); yb.pack(side="right",padx=4)
+            if not is_last:
+                tk.Frame(cic,bg=BOR,height=1).pack(fill="x")
 
-        # completion note
-        cn=tk.Frame(parent,bg=GRL); cn.pack(fill="x",padx=28,pady=(12,4))
-        tk.Label(cn,text="Completion is felt, not forced. The charge dissolves into genuine gratitude — "
-                 "often a quiet settling, moist eyes, a soft 'thank you'. If a pull remains, positive or negative, "
-                 "there are simply more answers to gather. Balance, not suppression, is the destination.",
-                 font=FSI,bg=GRL,fg=GR,wraplength=850,justify="left").pack(anchor="w",padx=14,pady=11)
-        tk.Frame(parent,height=36,bg=BG).pack()
+        # ── Completion note ──────────────────────────────────────────────────
+        tk.Frame(parent,bg=BG,height=10).pack()
+        cn=tk.Frame(parent,bg=GRL); cn.pack(fill="x",padx=30)
+        tk.Label(cn,
+            text="◆   Completion is felt, not forced. The charge dissolves into genuine gratitude — "
+                 "a quiet settling, moist eyes, a soft 'thank you'. "
+                 "If a pull remains, there are more answers to gather. "
+                 "Balance, not suppression, is the destination.",
+            font=("Segoe UI",9,"italic"),bg=GRL,fg=GRD,
+            wraplength=820,justify="left").pack(anchor="w",padx=18,pady=14)
+        tk.Frame(parent,height=48,bg=BG).pack()
 
     def _render_traits(self,frame,vars_list,side,ac):
         for w in frame.winfo_children(): w.destroy()
         for i,v in enumerate(vars_list):
-            row=tk.Frame(frame,bg=SURF); row.grid(row=i//2,column=i%2,sticky="ew",padx=(0,10),pady=3)
+            row=tk.Frame(frame,bg=SURF)
+            row.grid(row=i//2,column=i%2,sticky="ew",padx=(0,12),pady=4)
             frame.columnconfigure(0,weight=1); frame.columnconfigure(1,weight=1)
-            tk.Label(row,text=f"{i+1}",font=FTINY,bg=SURF,fg=TX3,width=2).pack(side="left")
-            tk.Entry(row,textvariable=v,font=FB,bg=SURF2,fg=TX,relief="flat",bd=0,insertbackground=TX,
-                     highlightthickness=1,highlightbackground=BOR,highlightcolor=ac).pack(side="left",fill="x",expand=True,padx=(4,0),ipady=6,ipadx=6)
+            # Number badge
+            num=tk.Label(row,text=str(i+1),font=("Segoe UI",8,"bold"),
+                         bg=SURF2,fg=TX3,width=2,anchor="center")
+            num.pack(side="left",padx=(0,6),ipady=3,ipadx=2)
+            # Entry
+            e=tk.Entry(row,textvariable=v,font=("Segoe UI",10),bg=SURF2,fg=TX,
+                       relief="flat",bd=0,insertbackground=TX,
+                       highlightthickness=1,highlightbackground=BOR,highlightcolor=ac)
+            e.pack(side="left",fill="x",expand=True,ipady=7,ipadx=8)
+            e.bind("<FocusIn>", lambda ev,en=e:en.config(highlightbackground=ac,bg=SURF))
+            e.bind("<FocusOut>",lambda ev,en=e:en.config(highlightbackground=BOR,bg=SURF2))
+            # Remove button (only when >1 trait)
             if len(vars_list)>1:
-                tk.Button(row,text="✕",font=FTINY,bg=SURF,fg=TX3,relief="flat",bd=0,cursor="hand2",padx=6,
-                          activebackground=SURF,activeforeground=TX2,
+                tk.Button(row,text="−",font=("Segoe UI",11),bg=SURF,fg=TX3,
+                          relief="flat",bd=0,cursor="hand2",padx=8,pady=0,
+                          activebackground=SURF2,activeforeground=TX2,
                           command=lambda idx=i,s=side:self._remove_trait(idx,s)).pack(side="left",padx=(4,0))
 
     def _add_trait(self,side,vars_list,frame,ac):
@@ -645,28 +737,38 @@ class App(tk.Tk):
             for i,c in enumerate(saved): self._add_box(card._bf,tlist,vars_list,i,c,ac,acl)
 
     def _add_box(self,frame,tlist,vars_list,idx,content,ac,acl):
-        outer=tk.Frame(frame,bg=SURF); outer.pack(fill="x",pady=(0,8))
+        outer=tk.Frame(frame,bg=SURF); outer.pack(fill="x",pady=(0,12))
+        # Live label showing which trait this box is for
         def mk():
             v=vars_list[idx] if idx<len(vars_list) else None
             t=v.get().strip() if v else ""
-            return f"{idx+1}.  {t if t else f'item {idx+1}'}"
-        lbl=tk.Label(outer,text=mk(),font=FTINY,bg=SURF,fg=ac,anchor="w"); lbl.pack(anchor="w",pady=(0,3))
+            return f"  {idx+1}.  {t if t else f'Trait {idx+1}'}"
+        lbl_row=tk.Frame(outer,bg=acl); lbl_row.pack(fill="x")
+        lbl=tk.Label(lbl_row,text=mk(),font=("Segoe UI",8,"italic"),
+                     bg=acl,fg=ac,anchor="w")
+        lbl.pack(side="left",padx=4,pady=5)
         if idx<len(vars_list):
             def _upd(*_a,l=lbl,f=mk):
                 try:
                     if l.winfo_exists(): l.config(text=f())
-                except tk.TclError:
-                    pass
+                except tk.TclError: pass
             vars_list[idx].trace_add("write",_upd)
-        wrap=tk.Frame(outer,bg=SURF2); wrap.pack(fill="x")
-        txt=tk.Text(wrap,font=FB,bg=SURF2,fg=TX,relief="flat",bd=0,wrap="word",height=4,insertbackground=TX,
-                    selectbackground=acl,highlightthickness=1,highlightbackground=BOR,highlightcolor=ac,
-                    spacing1=3,spacing3=4,padx=10,pady=8)
+        # Text area
+        txt=tk.Text(outer,font=("Segoe UI",10),bg=SURF2,fg=TX,relief="flat",bd=0,
+                    wrap="word",height=5,insertbackground=TX,
+                    selectbackground=acl,
+                    highlightthickness=1,highlightbackground=BOR,highlightcolor=ac,
+                    spacing1=2,spacing3=4,padx=12,pady=10)
         txt.pack(fill="x")
         if content: txt.insert("1.0",content)
-        sb=ttk.Scrollbar(wrap,command=txt.yview); txt.configure(yscrollcommand=sb.set)
-        txt.bind("<FocusIn>",lambda e,s=sb:s.pack(side="right",fill="y") or None)
-        txt.bind("<FocusOut>",lambda e,s=sb:s.pack_forget())
+        # Focus glow
+        txt.bind("<FocusIn>", lambda e,t=txt:t.config(highlightbackground=ac,bg=SURF))
+        txt.bind("<FocusOut>",lambda e,t=txt:t.config(highlightbackground=BOR,bg=SURF2))
+        sb=ttk.Scrollbar(outer,command=txt.yview); txt.configure(yscrollcommand=sb.set)
+        txt.bind("<FocusIn>", lambda e,s=sb,t=txt:(s.pack(side="right",fill="y"),
+                                                    t.config(highlightbackground=ac,bg=SURF)))
+        txt.bind("<FocusOut>",lambda e,s=sb,t=txt:(s.pack_forget(),
+                                                    t.config(highlightbackground=BOR,bg=SURF2)))
         tlist.append(txt)
 
     def _apply(self):
@@ -712,7 +814,11 @@ class App(tk.Tk):
                 f.write(payload)
             os.replace(tmp,self._autosave_file)  # atomic — survives mid-write crash
             self._last_autosave=payload
-            ts=date.today().strftime("%H:%M") if False else None  # keep status quiet
+            # Show subtle "saved" tick in meta bar for 2 seconds
+            try:
+                self._as_lbl.config(text="  ✓ saved",fg=GR)
+                self.after(2000,lambda:self._as_lbl.config(text="",fg=TX3))
+            except Exception: pass
         except Exception:
             pass  # never let autosave interrupt the user
 
