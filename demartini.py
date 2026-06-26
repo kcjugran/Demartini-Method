@@ -522,9 +522,9 @@ class App(tk.Tk):
         st.layout("TNotebook.Tab",[("Notebook.tab",{"sticky":"nswe","children":
             [("Notebook.padding",{"side":"top","sticky":"nswe","children":
                 [("Notebook.label",{"side":"top","sticky":""})]})]})])
-        st.configure("TScrollbar",background=SURF2,troughcolor=BG,borderwidth=0,
-                     arrowsize=0,relief="flat")
-        st.map("TScrollbar",background=[("active",BOR2)])
+        st.configure("TScrollbar",background=BOR2,troughcolor=SURF2,borderwidth=0,
+                     arrowsize=14,gripcount=0,relief="flat")
+        st.map("TScrollbar",background=[("active",TX3)])
         self.nb=ttk.Notebook(self); self.nb.pack(fill="both",expand=True)
         self._ta_out=tk.Frame(self.nb,bg=BG); self._tb_out=tk.Frame(self.nb,bg=BG)
         self.nb.add(self._ta_out,text="  Side A  "); self.nb.add(self._tb_out,text="  Side B  ")
